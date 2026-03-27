@@ -76,7 +76,7 @@ st.sidebar.title("☀️ SPICE Generation")
 st.sidebar.markdown("Solar Power Generation Dashboard")
 page = st.sidebar.radio(
     "Navigate",
-    ["🗺️ Map", "📊 Compare to Client", "🔮 Prediction Check", "⚡ The Paradox", "🕒 Hourly Smoke Analysis", "💡 Future Work"]
+    ["🗺️ Map", "📊 Compare to Client", "🔮 Prediction Check", "⚡ The Paradox", "🕒 Hourly Smoke Analysis", "💡 Future Work", "🔬 XAI"]
 )
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -346,18 +346,6 @@ elif page == "🔮 Prediction Check":
                         "Temperature (degrees C)", "Relative Humidity"]
         available = [c for c in condition_cols if c in row.index]
         st.dataframe(pd.DataFrame(row[available]).T, use_container_width=True)
-
-    st.subheader("Feature Importance")
-    importances = model.feature_importances_
-    feat_imp = pd.Series(importances, index=feature_names).sort_values(ascending=True).tail(15)
-
-    with st.expander("🔬 View Feature Importance"):
-        fig_imp, ax_imp = plt.subplots(figsize=(8, 6))
-        feat_imp.plot(kind="barh", ax=ax_imp, color="#f4a261")
-        ax_imp.set_xlabel("Importance")
-        ax_imp.set_title("Top 15 Feature Importances — Random Forest")
-        plt.tight_layout()
-        st.pyplot(fig_imp)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE 4 — THE PARADOX
@@ -676,3 +664,51 @@ elif page == "💡 Future Work":
         "with solar data from other SPICE projects as a means of null handling "
         "and predictions, so long as the other sites have a similar correlation. "
     )
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE 7 — XAI
+# ══════════════════════════════════════════════════════════════════════════════
+elif page == "🔬 XAI":
+    st.title("🔬 Model Explainability")
+    st.markdown(
+        "Exploring what drives the Random Forest's predictions using "
+        "feature importance and Partial Dependence Plots."
+    )
+
+    # Feature importance
+    st.subheader("Feature Importance — Top 15")
+    importances = model.feature_importances_
+    feat_imp = pd.Series(importances, index=feature_names).sort_values(ascending=True).tail(15)
+
+    fig_imp, ax_imp = plt.subplots(figsize=(8, 6))
+    feat_imp.plot(kind="barh", ax=ax_imp, color="#f4a261")
+    ax_imp.set_xlabel("Importance")
+    ax_imp.set_title("Top 15 Feature Importances — Random Forest")
+    plt.tight_layout()
+    st.pyplot(fig_imp)
+
+    st.info(
+        "💡 **Note:** cloud_pct does not appear in the top 15 features. "
+        "The model relies on shortwave radiation and attenuation ratio instead — "
+        "features that implicitly capture cloud type, not just cloud coverage."
+    )
+
+    # PDP
+    st.subheader("Partial Dependence — How features affect predictions")
+
+    core_features = [f for f in feature_names if "lag" not in f]
+    feature_to_plot = st.selectbox("Select feature to explore", core_features)
+
+    from sklearn.inspection import PartialDependenceDisplay
+    feature_idx = feature_names.index(feature_to_plot)
+
+    with st.spinner("Calculating..."):
+        fig_pdp, ax_pdp = plt.subplots(figsize=(8, 4))
+        PartialDependenceDisplay.from_estimator(
+            model,
+            df[feature_names].dropna(),
+            [feature_idx],
+            ax=ax_pdp
+        )
+        ax_pdp.set_title(f"Partial Dependence — {feature_to_plot}")
+        st.pyplot(fig_pdp)
