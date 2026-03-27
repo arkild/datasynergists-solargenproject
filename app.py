@@ -42,6 +42,8 @@ def detect_smoke_events(df, threshold=50, min_duration=1):
     
     # Flag smoky days
     daily_pm25['is_smoke'] = daily_pm25['pm25_mean'] >= threshold
+    #Stick to wildfire season range
+    daily_pm25 = daily_pm25[daily_pm25['date'].dt.month.between(4, 11)]
     
     # Group consecutive smoky days into events
     events = {}
@@ -49,18 +51,21 @@ def detect_smoke_events(df, threshold=50, min_duration=1):
     start = None
     
     for _, row in daily_pm25.iterrows():
-        if row['is_smoke'] and not in_event:
-            in_event = True
-            start = row['date']
-        elif not row['is_smoke'] and in_event:
-            in_event = False
-            peak = daily_pm25[
-                (daily_pm25['date'] >= start) & 
-                (daily_pm25['date'] < row['date'])
-            ]['pm25_mean'].max()
-            label = f"{start.strftime('%b %Y')} — Peak {peak:.0f} µg/m³"
-            events[label] = (start.strftime('%Y-%m-%d'), 
-                           row['date'].strftime('%Y-%m-%d'))
+            if row['is_smoke'] and not in_event:
+                in_event = True
+                start = row['date']
+            elif not row['is_smoke'] and in_event:
+                in_event = False
+                event_window = daily_pm25[
+                    (daily_pm25['date'] >= start) &
+                    (daily_pm25['date'] < row['date'])
+                ]
+                peak = event_window['pm25_mean'].max()
+                peak_date = event_window.loc[event_window['pm25_mean'].idxmax(), 'date']
+                label = f"{peak_date.strftime('%b %d, %Y')} — Peak {peak:.0f} µg/m³"
+                events[label] = (start.strftime('%Y-%m-%d'),
+                                row['date'].strftime('%Y-%m-%d'),
+                                peak_date.strftime('%Y-%m-%d'))
     
     return events
 
@@ -357,7 +362,8 @@ elif page == "⚡ The Paradox":
     df_daylight = df[df["solar_elevation"] > 0]
 
     event = st.selectbox("Select a wildfire event", list(wildfire_events.keys()))
-    start, end = wildfire_events[event]
+    start, end, peak_date_str = wildfire_events[event]
+    peak_date = pd.Timestamp(peak_date_str)
 
     event_start = pd.Timestamp(start)
     event_end = pd.Timestamp(end)
@@ -444,6 +450,13 @@ elif page == "⚡ The Paradox":
             baseline_mean, linestyle="--", color="#2a9d8f", linewidth=1.5,
             label=f"Baseline avg ({baseline_mean:.2f} MW)"
         )
+        # Highlight peak smoke day
+        peak_row = df_daily[df_daily["date"] == peak_date]
+        if not peak_row.empty:
+            ax.scatter(peak_row["date"], peak_row["avg_generation"],
+                       s=200, zorder=6, facecolors='none',
+                       edgecolors='red', linewidth=2.5,
+                       label="Peak smoke day")
 
         ax.set_xlabel("Date")
         ax.set_ylabel("Avg Generation (MW)")
