@@ -229,7 +229,9 @@ elif page == "📊 Compare to Client":
         ax1.set_title("KKP1 vs Client Site — Daily Capacity Factor")
         ax1.legend()
         plt.tight_layout()
-        st.pyplot(fig1)
+        col_scatter, col_empty = st.columns([1, 1])
+        with col_scatter:
+            st.pyplot(fig1)
 
         # Plot 2 — Time series with gap fill highlighted
         st.subheader("Generation Over Time — Actual & Gap-Filled")
