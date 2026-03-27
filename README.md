@@ -5,10 +5,13 @@ in Edmonton, Alberta — with a focus on the impact of wildfire smoke events.
 
 ## Pages
 
-- **Map** — NASA GIBS satellite imagery of Edmonton during smoke events
-- **Client Nulls** — Gap-fill analysis using KKP1 as a proxy for the client site (r=0.916)
-- **Free Prediction** — Historical generation lookup using a Random Forest model (R²=0.86, blind tested on 2025)
-- **The Paradox** — Wildfire smoke vs solar generation — the counterintuitive finding
+- **🗺️ Map** — NASA GIBS satellite imagery of Edmonton during smoke events, with ±5 day scrubbing around detected events
+- **📊 Compare to Client** — Gap-fill analysis using KKP1 as a proxy for the client site (r=0.916)
+- **🔮 Prediction Check** — Historical generation lookup using a Random Forest model (R²=0.86, blind tested on 2025)
+- **⚡ The Paradox** — Wildfire smoke vs solar generation — the counterintuitive finding
+- **🕒 Hourly Smoke Analysis** — Hourly PM2.5 and generation across ±3 day daylight windows
+- **💡 Future Work** — Next steps for model improvement and data expansion
+- **🔬 XAI** — Feature importance and Partial Dependence Plots for model explainability
 
 ## Data Sources
 
