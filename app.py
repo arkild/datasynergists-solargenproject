@@ -8,7 +8,7 @@ from datetime import datetime, date
 
 # ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="SPICE Solar Dashboard",
+    page_title="SPICE Generation Dashboard",
     page_icon="☀️",
     layout="wide"
 )
@@ -67,7 +67,7 @@ def detect_smoke_events(df, threshold=50, min_duration=1):
 wildfire_events = detect_smoke_events(df, threshold=50)
 
 # ── Sidebar navigation ────────────────────────────────────────────────────────
-st.sidebar.title("☀️ SPICE Solar")
+st.sidebar.title("☀️ SPICE Generation")
 st.sidebar.markdown("Solar Power Generation Dashboard")
 page = st.sidebar.radio(
     "Navigate",
