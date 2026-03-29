@@ -5,6 +5,8 @@ import pickle
 import matplotlib.pyplot as plt
 import requests
 from datetime import datetime, date
+import shap
+
 
 # ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -666,49 +668,158 @@ elif page == "💡 Future Work":
     )
 
 # ══════════════════════════════════════════════════════════════════════════════
+## ══════════════════════════════════════════════════════════════════════════════
 # PAGE 7 — XAI
+# As we know Random forest is a blackbox model, to understand how it makes predictions, we need to use XAI techniques.
+# So techniques like feature importance, Shap, and partial dependence plots can help us understand which features are driving the model's predictions.
+
 # ══════════════════════════════════════════════════════════════════════════════
 elif page == "🔬 XAI":
     st.title("🔬 Model Explainability")
     st.markdown(
-        "Exploring what drives the Random Forest's predictions using "
-        "feature importance and Partial Dependence Plots."
+        "This page explains what drives the Random Forest model's solar generation predictions "
+        "using feature importance, SHAP summary plots, and partial dependence plots."
     )
 
-    # Feature importance
-    st.subheader("Feature Importance — Top 15")
-    importances = model.feature_importances_
-    feat_imp = pd.Series(importances, index=feature_names).sort_values(ascending=True).tail(15)
+    # Build the test dataset in the same way as the evaluation period.
+    # Here, we are only using rows after 2024-12-31 because that is our test period.
+    # We also keep only the exact features used by the trained model.
+    test = df[df["dt"] > "2024-12-31"].reset_index(drop=True)
+    X_test = test[feature_names].dropna().copy()
 
-    fig_imp, ax_imp = plt.subplots(figsize=(8, 6))
-    feat_imp.plot(kind="barh", ax=ax_imp, color="#f4a261")
-    ax_imp.set_xlabel("Importance")
-    ax_imp.set_title("Top 15 Feature Importances — Random Forest")
-    plt.tight_layout()
-    st.pyplot(fig_imp)
+    # If there is no test data available, show a warning instead of breaking the app.
+    if X_test.empty:
+        st.warning("No test data available for XAI.")
+    else:
+       
+        # Feature importance tells us which variables the Random Forest used the most
+        # across all trees in the model.
+        st.subheader("1. Feature Importance — Top 15")
+        importances = model.feature_importances_
 
-    st.info(
-        "💡 **Note:** cloud_pct does not appear in the top 15 features. "
-        "The model relies on shortwave radiation and attenuation ratio instead — "
-        "features that implicitly capture cloud type, not just cloud coverage."
-    )
+        # Convert feature importances into a pandas Series so we can sort them easily.
+        # We keep only the top 15 most important features for a cleaner plot.
+        feat_imp = pd.Series(importances, index=feature_names).sort_values(ascending=True).tail(15)
 
-    # PDP
-    st.subheader("Partial Dependence — How features affect predictions")
+        # Create a horizontal bar plot because it is easier to read feature names this way.
+        fig_imp, ax_imp = plt.subplots(figsize=(8, 6))
+        feat_imp.plot(kind="barh", ax=ax_imp, color="#f4a261")
+        ax_imp.set_xlabel("Importance")
+        ax_imp.set_title("Top 15 Feature Importances — Random Forest")
+        plt.tight_layout()
+        st.pyplot(fig_imp)
 
-    core_features = [f for f in feature_names if "lag" not in f]
-    feature_to_plot = st.selectbox("Select feature to explore", core_features)
-
-    from sklearn.inspection import PartialDependenceDisplay
-    feature_idx = feature_names.index(feature_to_plot)
-
-    with st.spinner("Calculating..."):
-        fig_pdp, ax_pdp = plt.subplots(figsize=(8, 4))
-        PartialDependenceDisplay.from_estimator(
-            model,
-            df[feature_names].dropna(),
-            [feature_idx],
-            ax=ax_pdp
+        # This short interpretation helps the client understand the main takeaway.
+        st.info(
+            "Shortwave radiation and related lag features dominate the model. "
+            "This means the model is primarily learning from incoming solar energy and time-based patterns."
         )
-        ax_pdp.set_title(f"Partial Dependence — {feature_to_plot}")
-        st.pyplot(fig_pdp)
+
+        # -----------------------------
+        # 2. SHAP summary plot
+        # -----------------------------
+        # SHAP gives a more detailed explanation than feature importance.
+        # shap work by taking mean value of the generation prediction across the dataset as a baseline,
+        #  then calculating how much each feature pushes individual predictions above or below that baseline.
+        st.subheader("2. SHAP Summary Plot")
+        st.markdown(
+            "This plot shows which features have the strongest overall influence on predictions, "
+            "and whether high or low values push generation upward or downward."
+        )
+
+        # SHAP is slow if we use for whole datasets, so we use a sample of up to 300 rows
+        # to make the app faster while still giving a useful explanation.
+        # we used random_state=42 to ensure the same sample is used each time for consistency in explanations.
+        max_rows = min(300, len(X_test))
+        X_shap = X_test.sample(max_rows, random_state=42) if len(X_test) > max_rows else X_test
+
+        # Create a TreeExplainer because Random Forest is a tree-based model.
+        # check_additivity=False helps avoid small numerical mismatch errors.
+        with st.spinner("Calculating SHAP values..."):
+            explainer = shap.TreeExplainer(model)
+            shap_values = explainer(X_shap, check_additivity=False)
+
+        # The beeswarm plot shows all features separately.
+        # max_display=len(feature_names) is important because it avoids grouping
+        # many features into one misleading "sum of other features" row.
+        plt.figure(figsize=(10, 8))
+        shap.plots.beeswarm(
+            shap_values,
+            max_display=len(feature_names),
+            show=False
+        )
+        st.pyplot(plt.gcf(), clear_figure=True)
+
+        # Simple interpretation for the user/client.
+        st.info(
+            "Features with wider horizontal spread have greater influence. "
+            "Points to the right increase predicted generation, while points to the left decrease it."
+        )
+
+        # -----------------------------
+        # 3. Actual vs Predicted Plot
+        # -----------------------------
+        # This plot checks model performance visually.
+        # If the predictions are close to the diagonal dashed line,
+        # it means predicted values are close to actual values.
+        st.subheader("3. Actual vs Predicted")
+        st.markdown(
+            "This plot compares the model's predicted solar generation with the actual observed generation."
+        )
+
+        # Get the true target values (actual generation) for the same rows used in X_test.
+        y_test = test.loc[X_test.index, "Volume"]
+
+        # Predict generation using the trained Random Forest model.
+        y_pred = model.predict(X_test)
+
+        # Scatter plot of actual vs predicted values.
+        fig_ap, ax_ap = plt.subplots(figsize=(7, 6))
+        ax_ap.scatter(y_test, y_pred, alpha=0.4, s=12, color="#2a9d8f")
+
+        # Add a dashed 45-degree line.
+        # Perfect predictions would fall exactly on this line.
+        line_min = min(y_test.min(), y_pred.min())
+        line_max = max(y_test.max(), y_pred.max())
+        ax_ap.plot([line_min, line_max], [line_min, line_max], "r--", linewidth=1)
+
+        ax_ap.set_xlabel("Actual Generation (MW)")
+        ax_ap.set_ylabel("Predicted Generation (MW)")
+        ax_ap.set_title("Actual vs Predicted — Random Forest")
+
+        plt.tight_layout()
+        st.pyplot(fig_ap)
+
+        # Help the reader understand what the plot means.
+        st.info(
+            "Points closer to the dashed diagonal line indicate better predictions. "
+            "Large deviations from the line represent prediction error."
+        )
+
+        # -----------------------------
+        # 4. PDP
+        # -----------------------------
+        # Partial Dependence Plot (PDP) shows the average effect of one feature
+        # on the model prediction, while averaging out the influence of other features.
+        st.subheader("4. Partial Dependence Plot")
+        st.markdown(
+            "This plot shows the average effect of one feature on the model prediction while averaging over the others."
+        )
+
+        # We remove lag features here to keep the dropdown simpler and easier to interpret.
+        core_features = [f for f in feature_names if "lag" not in f]
+        feature_to_plot = st.selectbox("Select feature to explore", core_features)
+
+        from sklearn.inspection import PartialDependenceDisplay
+
+        # Generate the PDP for the selected feature.
+        with st.spinner("Calculating partial dependence..."):
+            fig_pdp, ax_pdp = plt.subplots(figsize=(8, 4))
+            PartialDependenceDisplay.from_estimator(
+                model,
+                df[feature_names].dropna(),
+                [feature_to_plot],
+                ax=ax_pdp
+            )
+            ax_pdp.set_title(f"Partial Dependence — {feature_to_plot}")
+            st.pyplot(fig_pdp)
