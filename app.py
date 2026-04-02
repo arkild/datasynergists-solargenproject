@@ -829,7 +829,7 @@ elif page == "🔬 XAI":
 # PAGE 8 — RAG CHATBOT
 # ══════════════════════════════════════════════════════════════════════════════
 elif page == "🤖 RAG Chatbot":
-    st.title("🤖 Ask the Data")
+    st.title("🤖 Ask the Data (beta)")
     st.markdown(
         "Ask questions about solar generation, smoke events, and weather conditions. "
         "The chatbot retrieves relevant data from the KKP1 dataset to answer your questions."
