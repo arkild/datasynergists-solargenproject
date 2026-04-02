@@ -812,16 +812,18 @@ elif page == "🔬 XAI":
 
         from sklearn.inspection import PartialDependenceDisplay
 
-    with st.spinner("Calculating..."):
-        fig_pdp, ax_pdp = plt.subplots(figsize=(8, 4))
-        PartialDependenceDisplay.from_estimator(
-            model,
-            df[feature_names].dropna(),
-            [feature_idx],
-            ax=ax_pdp
-        )
-        ax_pdp.set_title(f"Partial Dependence — {feature_to_plot}")
-        st.pyplot(fig_pdp)
+        feature_idx = feature_names.index(feature_to_plot)
+
+        with st.spinner("Calculating..."):
+            fig_pdp, ax_pdp = plt.subplots(figsize=(8, 4))
+            PartialDependenceDisplay.from_estimator(
+                model,
+                df[feature_names].dropna(),
+                [feature_idx],
+                ax=ax_pdp
+            )
+            ax_pdp.set_title(f"Partial Dependence — {feature_to_plot}")
+            st.pyplot(fig_pdp)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE 8 — RAG CHATBOT
