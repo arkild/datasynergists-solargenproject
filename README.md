@@ -11,7 +11,9 @@ in Edmonton, Alberta — with a focus on the impact of wildfire smoke events.
 - **⚡ The Paradox** — Wildfire smoke vs solar generation — the counterintuitive finding
 - **🕒 Hourly Smoke Analysis** — Hourly PM2.5 and generation across ±3 day daylight windows
 - **💡 Future Work** — Next steps for model improvement and data expansion
-- **🔬 XAI** — Feature importance and Partial Dependence Plots for model explainability
+- **🔬 XAI** — Feature importance, Actual vs Predicted, and Partial Dependence Plots
+- **🧠 SHAP** — SHAP beeswarm analysis showing how each feature influences individual predictions
+- **🤖 RAG Chatbot** — Ask questions about the solar data using retrieval-augmented generation
 
 ## Data Sources
 
