@@ -78,7 +78,7 @@ st.sidebar.title("☀️ SPICE Generation")
 st.sidebar.markdown("Solar Power Generation Dashboard")
 page = st.sidebar.radio(
     "Navigate",
-    ["🗺️ Map", "📊 Compare to Client", "🔮 Prediction Check", "⚡ The Paradox", "🕒 Hourly Smoke Analysis", "🔬 XAI", "💡 Future Work", "🤖 RAG Chatbot"]
+    ["🗺️ Map", "📊 Compare to Client", "🔮 Prediction Check", "⚡ The Paradox", "🕒 Hourly Smoke Analysis", "🔬 XAI", "🧠 SHAP", "💡 Future Work", "🤖 RAG Chatbot"]
 )
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -716,47 +716,6 @@ elif page == "🔬 XAI":
         )
 
         # -----------------------------
-        # 2. SHAP summary plot
-        # -----------------------------
-        # SHAP gives a more detailed explanation than feature importance.
-        # shap work by taking mean value of the generation prediction across the dataset as a baseline,
-        #  then calculating how much each feature pushes individual predictions above or below that baseline.
-        st.subheader("2. SHAP Summary Plot")
-        st.markdown(
-            "This plot shows which features have the strongest overall influence on predictions, "
-            "and whether high or low values push generation upward or downward."
-        )
-
-        # SHAP is slow if we use for whole datasets, so we use a sample of up to 300 rows
-        # to make the app faster while still giving a useful explanation.
-        # we used random_state=42 to ensure the same sample is used each time for consistency in explanations.
-        max_rows = min(300, len(X_test))
-        X_shap = X_test.sample(max_rows, random_state=42) if len(X_test) > max_rows else X_test
-
-        # Create a TreeExplainer because Random Forest is a tree-based model.
-        # check_additivity=False helps avoid small numerical mismatch errors.
-        with st.spinner("Calculating SHAP values..."):
-            explainer = shap.TreeExplainer(model)
-            shap_values = explainer(X_shap, check_additivity=False)
-
-        # The beeswarm plot shows all features separately.
-        # max_display=len(feature_names) is important because it avoids grouping
-        # many features into one misleading "sum of other features" row.
-        plt.figure(figsize=(10, 8))
-        shap.plots.beeswarm(
-            shap_values,
-            max_display=len(feature_names),
-            show=False
-        )
-        st.pyplot(plt.gcf(), clear_figure=True)
-
-        # Simple interpretation for the user/client.
-        st.info(
-            "Features with wider horizontal spread have greater influence. "
-            "Points to the right increase predicted generation, while points to the left decrease it."
-        )
-
-        # -----------------------------
         # 3. Actual vs Predicted Plot
         # -----------------------------
         # This plot checks model performance visually.
@@ -824,6 +783,40 @@ elif page == "🔬 XAI":
             )
             ax_pdp.set_title(f"Partial Dependence — {feature_to_plot}")
             st.pyplot(fig_pdp)
+
+# SHAP Page split (will update with better code later)
+elif page == "🧠 SHAP":
+    st.title("🧠 SHAP Analysis")
+    st.markdown(
+        "SHAP explains how each feature pushes individual predictions above or below "
+        "the baseline average prediction. This may take 30-60 seconds to compute."
+    )
+
+    test = df[df["dt"] > "2024-12-31"].reset_index(drop=True)
+    X_test = test[feature_names].dropna().copy()
+
+    if X_test.empty:
+        st.warning("No test data available for SHAP analysis.")
+    else:
+        max_rows = min(300, len(X_test))
+        X_shap = X_test.sample(max_rows, random_state=42) if len(X_test) > max_rows else X_test
+
+        with st.spinner("Calculating SHAP values — this may take a moment..."):
+            explainer = shap.TreeExplainer(model)
+            shap_values = explainer(X_shap, check_additivity=False)
+
+        plt.figure(figsize=(10, 8))
+        shap.plots.beeswarm(
+            shap_values,
+            max_display=len(feature_names),
+            show=False
+        )
+        st.pyplot(plt.gcf(), clear_figure=True)
+
+        st.info(
+            "Features with wider horizontal spread have greater influence. "
+            "Points to the right increase predicted generation, while points to the left decrease it."
+        )
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE 8 — RAG CHATBOT
