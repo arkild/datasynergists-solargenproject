@@ -9,8 +9,8 @@ wildfire_events = detect_smoke_events(df)
 
 st.title("🕒 Hourly Smoke Analysis")
 st.markdown(
-    "Explore hourly solar generation and PM2.5 across a ±3 day window around "
-    "a smoke event. Nighttime gaps are shaded — PM2.5 readings across those "
+    "Explore hourly solar generation and AOD across a ±3 day window around "
+    "a smoke event. Nighttime gaps are shaded — AOD readings across those "
     "gaps are not directly comparable to adjacent daylight hours."
 )
 
@@ -18,12 +18,22 @@ df_hourly = df.copy()
 df_hourly["date"] = df_hourly["dt"].dt.date
 df_hourly["hour"] = df_hourly["dt"].dt.hour
 
-event_choice = st.selectbox(
-    "Select a wildfire event (auto-fills date)",
-    ["Custom date"] + list(wildfire_events.keys())
-)
+# Use ground truth where available, fall back to backcast prediction
+df_hourly["generation"] = df_hourly["ground_truth"].combine_first(df_hourly["predicted_volume"])
 
-if event_choice == "Custom date":
+event_keys = list(wildfire_events.keys())
+gt_start = pd.Timestamp('2022-09-01')
+
+default_index = 0
+for i, key in enumerate(event_keys):
+    event_start = pd.Timestamp(wildfire_events[key][0])
+    if event_start >= gt_start:
+        default_index = i
+        break
+
+mode = st.radio("Choose mode", ["Wildfire Event", "Custom Date"], horizontal=True)
+
+if mode == "Custom Date":
     selected_date = st.date_input(
         "Choose a date",
         value=df_hourly["date"].min(),
@@ -31,7 +41,13 @@ if event_choice == "Custom date":
         max_value=df_hourly["date"].max()
     )
     center_dt = pd.Timestamp(selected_date)
+    event_choice = "Custom date"
 else:
+    event_choice = st.selectbox(
+        "Select a wildfire event (auto-fills date)",
+        event_keys,
+        index=default_index
+    )
     start, end, peak_date_str = wildfire_events[event_choice]
     center_dt = pd.Timestamp(peak_date_str)
     st.caption(f"Peak smoke day: {center_dt.date()}")
@@ -50,9 +66,9 @@ if day_df.empty:
     st.warning("No daylight data available for this window.")
 else:
     col1, col2, col3 = st.columns(3)
-    col1.metric("Peak Hourly PM2.5", f"{day_df['pm25_mean'].max():.1f} µg/m³")
-    col2.metric("Average PM2.5", f"{day_df['pm25_mean'].mean():.1f} µg/m³")
-    col3.metric("Peak Generation", f"{day_df['Volume'].max():.3f} MW")
+    col1.metric("Peak Hourly AOD", f"{day_df['aod_smoke'].max():.2f}")
+    col2.metric("Average AOD", f"{day_df['aod_smoke'].mean():.2f}")
+    col3.metric("Peak Generation", f"{day_df['generation'].max():.3f} MW")
 
     fig, ax1 = plt.subplots(figsize=(14, 5))
 
@@ -64,29 +80,37 @@ else:
     for _, gap_row in night_gaps.iterrows():
         gap_x = day_df.loc[gap_row.name - 1, "dt"] + (gap_row["dt"] - day_df.loc[gap_row.name - 1, "dt"]) / 2
         ax1.axvline(gap_x, color="gray", linestyle=":", linewidth=1.5, alpha=0.7)
-        ax1.annotate("🌙", xy=(gap_x, ax1.get_ylim()[1]),
-                    ha="center", fontsize=10, color="gray")
 
-    from matplotlib.patches import Patch
     night_patch = Patch(facecolor='navy', alpha=0.15, label='Nighttime gap')
 
-    # Generation line
+    # Generation line — split by source (measured vs backcast)
+    day_df["is_measured"] = day_df["ground_truth"].notna()
+
+    measured_seg = day_df[day_df["is_measured"]]
+    backcast_seg = day_df[~day_df["is_measured"]]
+
     ax1.plot(
-        day_df["dt"], day_df["Volume"],
+        measured_seg["dt"], measured_seg["generation"],
         marker="o", linewidth=2, color="#e76f51", markersize=3,
-        label="Solar Generation (MW)"
+        label="Solar Generation — Measured (MW)"
+    )
+    ax1.plot(
+        backcast_seg["dt"], backcast_seg["generation"],
+        marker="o", linewidth=2, color="#e76f51", markersize=3,
+        linestyle="--", alpha=0.6,
+        label="Solar Generation — Backcast Estimate (MW)"
     )
     ax1.set_xlabel("Date & Hour")
     ax1.set_ylabel("Solar Generation (MW)")
 
-    # PM2.5 line
+    # AOD line
     ax2 = ax1.twinx()
     ax2.plot(
-        day_df["dt"], day_df["pm25_mean"],
+        day_df["dt"], day_df["aod_smoke"],
         marker="s", linestyle="--", linewidth=2,
-        color="#2a9d8f", markersize=3, label="PM2.5 (µg/m³)"
+        color="#2a9d8f", markersize=3, label="AOD"
     )
-    ax2.set_ylabel("PM2.5 (µg/m³)")
+    ax2.set_ylabel("Aerosol Optical Depth (AOD)")
 
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
@@ -99,7 +123,7 @@ else:
     fig.tight_layout()
     st.pyplot(fig)
 
-    show_cols = ["dt", "hour", "Volume", "pm25_mean"]
+    show_cols = ["dt", "hour", "generation", "aod_smoke"]
     extra_cols = ["shortwave", "cloud_pct", "solar_elevation", "attenuation_ratio",
                 "Temperature (degrees C)", "Relative Humidity"]
     for col in extra_cols:
@@ -108,4 +132,4 @@ else:
 
     with st.expander("View hourly data table"):
         st.dataframe(day_df[show_cols].reset_index(drop=True),
-                        use_container_width=True)
+                        width='stretch')

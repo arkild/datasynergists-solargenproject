@@ -12,6 +12,18 @@ st.set_page_config(
     layout="wide"
 )
 
+st.markdown("""
+    <style>
+    div[data-baseweb="select"] [class*="control"] {
+        border-color: #2a9d8f !important;
+        box-shadow: none !important;
+    }
+    div[data-baseweb="select"] [class*="control"]:hover {
+        border-color: #2a9d8f !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 # ── Load model and features ───────────────────────────────────────────────────
 @st.cache_resource
 def load_model():
