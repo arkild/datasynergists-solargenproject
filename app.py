@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import pickle
+#for smoke event measurements
+from datetime import timedelta
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -49,10 +51,20 @@ def detect_smoke_events(df, threshold=0.2, min_duration=1):
             ]
             peak = event_window['aod_smoke'].max()
             peak_date = event_window.loc[event_window['aod_smoke'].idxmax(), 'date']
-            label = f"{peak_date.strftime('%b %d, %Y')} — Peak AOD {peak:.2f}"
+            duration = (row['date'] - start).days
+
+            if duration == 1:
+                label = f"{peak_date.strftime('%b %d, %Y')} — Peak AOD {peak:.2f}"
+            else:
+                label = (
+                    f"{duration}d | "
+                    f"{start.strftime('%b %d')}–{(row['date'] - timedelta(days=1)).strftime('%b %d, %Y')} — "
+                    f"Peak AOD {peak:.2f}"
+                )
+
             events[label] = (start.strftime('%Y-%m-%d'),
-                             row['date'].strftime('%Y-%m-%d'),
-                             peak_date.strftime('%Y-%m-%d'))
+                            row['date'].strftime('%Y-%m-%d'),
+                            peak_date.strftime('%Y-%m-%d'))
     return events
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
