@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 from datetime import date
-from app import load_data, detect_smoke_events
+from app import load_data, detect_smoke_events, get_event_window_data
 
 st.markdown("""
     <style>
@@ -51,7 +51,9 @@ with col3:
             max_value=date(2025, 12, 31)
         )
     else:
-        event_center = pd.Timestamp(wildfire_events[event][2]).date()
+        start_str, end_str, peak_str = wildfire_events[event]
+        _, _, window_start, window_end = get_event_window_data(df, start_str, end_str, padding_days=5)
+        event_center = pd.Timestamp(peak_str).date()
         day_offset = st.slider(
             "Days around peak",
             min_value=-5,

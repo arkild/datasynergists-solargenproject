@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
-from app import load_data, detect_smoke_events
+from app import load_data, detect_smoke_events, get_event_window_data
 
 df = load_data()
 wildfire_events = detect_smoke_events(df)
@@ -48,9 +48,10 @@ else:
         event_keys,
         index=default_index
     )
-    start, end, peak_date_str = wildfire_events[event_choice]
-    center_dt = pd.Timestamp(peak_date_str)
+    start_str, end_str, peak_str = wildfire_events[event_choice]
+    center_dt = pd.Timestamp(peak_str)
     st.caption(f"Peak smoke day: {center_dt.date()}")
+    _, _, window_start, window_end = get_event_window_data(df, start_str, end_str, padding_days=3)
 
 # ±3 days window, daylight only
 window_start = center_dt - pd.Timedelta(days=3)
