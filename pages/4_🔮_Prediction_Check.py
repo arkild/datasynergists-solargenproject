@@ -63,7 +63,7 @@ if row.empty:
     st.warning("No data available for this exact date and hour. Try another.")
 else:
     row = row.iloc[0]
-    X = row[feature_names].values.reshape(1, -1)
+    X = row[feature_names].to_frame().T
     predicted = model.predict(X)[0]
 
     # Use ground truth if available, otherwise fall back to stored prediction
