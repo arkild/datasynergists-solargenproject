@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import pickle
+import joblib
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -12,8 +13,7 @@ st.set_page_config(
 # ── Load model and features ───────────────────────────────────────────────────
 @st.cache_resource
 def load_model():
-    with open("models/rf_best_kkp1.pkl", "rb") as f:
-        model = pickle.load(f)
+    model = joblib.load("models/rf_best_kkp1.pkl")
     with open("models/feature_names.pkl", "rb") as f:
         features = pickle.load(f)
     return model, features

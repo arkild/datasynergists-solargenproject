@@ -81,3 +81,68 @@ else:
     col1.metric("🔮 Model Predicted (Live)", f"{predicted:.3f} MW")
     col2.metric(actual_label, f"{actual:.3f} MW")
     col3.metric("📊 Difference", f"{diff:+.3f} MW", f"{pct_err:.1f}% error")
+
+    # ── Feature breakdown ─────────────────────────────────────────────────
+    st.subheader("🧩 Feature Breakdown — This Prediction")
+    st.markdown("Key conditions the model used to produce the prediction above.")
+
+    # (column name, display label, unit suffix, format spec)
+    core_display_spec = [
+        ("shortwave", "Solar Irradiance", " W/m²", "{:.0f}"),
+        ("cloud_pct", "Cloud Cover", "%", "{:.1f}"),
+        ("cloudbase_m", "Cloud Base Height", " m", "{:,.0f}"),
+        ("aod_smoke", "Smoke (AOD)", "", "{:.3f}"),
+        ("solar_elevation", "Solar Elevation", "°", "{:.1f}"),
+        ("attenuation_ratio", "Attenuation Ratio", "", "{:.2f}"),
+        ("Temperature (degrees C)", "Temperature", "°C", "{:.1f}"),
+        ("Relative Humidity", "Relative Humidity", "%", "{:.0f}"),
+    ]
+    # Only show ones that actually exist in this dataframe, in case naming
+    # ever drifts between this list and the underlying data.
+    core_display_spec = [spec for spec in core_display_spec if spec[0] in row.index]
+
+    core_table = pd.DataFrame({
+        "Condition": [label for _, label, _, _ in core_display_spec],
+        "Value": [
+            fmt.format(row[col]) + unit
+            for col, label, unit, fmt in core_display_spec
+        ]
+    })
+    st.dataframe(core_table, width='stretch', hide_index=True)
+
+    # Full feature list + SHAP explanation both live behind this button —
+    # avoids cluttering the default view and avoids triggering SHAP on
+    # every date/hour change.
+    if st.button("Show full feature list & SHAP explanation"):
+        st.markdown("**Full feature set used by the model:**")
+        feat_table = pd.DataFrame({
+            "Feature": feature_names,
+            "Value": row[feature_names].values
+        })
+        st.dataframe(feat_table, width='stretch', hide_index=True)
+
+        import shap
+
+        with st.spinner("Calculating SHAP values for this prediction..."):
+            explainer = shap.TreeExplainer(model)
+            X_row = row[feature_names].values.reshape(1, -1)
+            shap_values = explainer(X_row, check_additivity=False)
+
+        shap_df = pd.DataFrame({
+            "Feature": feature_names,
+            "SHAP value": shap_values.values[0]
+        }).sort_values("SHAP value", key=abs, ascending=False)
+
+        st.markdown(
+            "How each feature pushed **this specific prediction** above or "
+            "below the model's baseline output. Positive values push the "
+            "prediction up, negative values pull it down."
+        )
+        st.dataframe(
+            shap_df.style.background_gradient(
+                cmap="RdBu_r", subset=["SHAP value"], vmin=-shap_df["SHAP value"].abs().max(),
+                vmax=shap_df["SHAP value"].abs().max()
+            ),
+            width='stretch',
+            hide_index=True
+        )

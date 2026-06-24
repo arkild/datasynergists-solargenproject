@@ -42,6 +42,10 @@ if mode == "Custom Date":
     )
     center_dt = pd.Timestamp(selected_date)
     event_choice = "Custom date"
+    date_str = selected_date.strftime("%Y-%m-%d")
+    # Single-day "event" — padding 3 days each side gives the same ±3 day
+    # window, but routed through the same shared function as every other page.
+    _, _, window_start, window_end = get_event_window_data(df, date_str, date_str, padding_days=3)
 else:
     event_choice = st.selectbox(
         "Select a wildfire event (auto-fills date)",
@@ -52,10 +56,6 @@ else:
     center_dt = pd.Timestamp(peak_str)
     st.caption(f"Peak smoke day: {center_dt.date()}")
     _, _, window_start, window_end = get_event_window_data(df, start_str, end_str, padding_days=3)
-
-# ±3 days window, daylight only
-window_start = center_dt - pd.Timedelta(days=3)
-window_end = center_dt + pd.Timedelta(days=3)
 
 day_df = df_hourly[
     (df_hourly["dt"] >= window_start) &
@@ -81,8 +81,6 @@ else:
     for _, gap_row in night_gaps.iterrows():
         gap_x = day_df.loc[gap_row.name - 1, "dt"] + (gap_row["dt"] - day_df.loc[gap_row.name - 1, "dt"]) / 2
         ax1.axvline(gap_x, color="gray", linestyle=":", linewidth=1.5, alpha=0.7)
-
-    night_patch = Patch(facecolor='navy', alpha=0.15, label='Nighttime gap')
 
     # Generation line — split by source (measured vs backcast)
     day_df["is_measured"] = day_df["ground_truth"].notna()
@@ -115,9 +113,7 @@ else:
 
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
-    ax1.legend(lines1 + lines2 + [night_patch], 
-        labels1 + labels2 + ['Nighttime gap'], 
-        loc="upper left", fontsize=8)
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper left", fontsize=8)
 
     plt.title(f"Daylight Hours ±3 Days — {event_choice}")
     plt.xticks(rotation=45)

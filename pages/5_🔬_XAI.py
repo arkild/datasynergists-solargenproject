@@ -10,7 +10,7 @@ model, feature_names = load_model()
 st.title("🔬 Model Explainability")
 st.markdown(
     "This page explains what drives the Random Forest model's solar generation predictions "
-    "using feature importance, SHAP summary plots, and partial dependence plots."
+    "using feature importance and partial dependence plots."
 )
 
 # Build the test dataset in the same way as the evaluation period.
@@ -48,18 +48,18 @@ else:
     )
 
     # -----------------------------
-    # 3. Actual vs Predicted Plot
+    # 2. Actual vs Predicted Plot
     # -----------------------------
     # This plot checks model performance visually.
     # If the predictions are close to the diagonal dashed line,
     # it means predicted values are close to actual values.
-    st.subheader("3. Actual vs Predicted")
+    st.subheader("2. Actual vs Predicted")
     st.markdown(
         "This plot compares the model's predicted solar generation with the actual observed generation."
     )
 
     # Get the true target values (actual generation) for the same rows used in X_test.
-    y_test = test.loc[X_test.index, "Volume"]
+    y_test = test.loc[X_test.index, "ground_truth"]
 
     # Predict generation using the trained Random Forest model.
     y_pred = model.predict(X_test)
@@ -88,11 +88,11 @@ else:
     )
 
     # -----------------------------
-    # 4. PDP
+    # 3. PDP
     # -----------------------------
     # Partial Dependence Plot (PDP) shows the average effect of one feature
     # on the model prediction, while averaging out the influence of other features.
-    st.subheader("4. Partial Dependence Plot")
+    st.subheader("3. Partial Dependence Plot")
     st.markdown(
         "This plot shows the average effect of one feature on the model prediction while averaging over the others."
     )
