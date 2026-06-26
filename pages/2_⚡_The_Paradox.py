@@ -1,7 +1,9 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-from app import load_data, detect_smoke_events, get_event_window_data
+from app import load_data, detect_smoke_events, get_event_window_data, render_sidebar
+
+render_sidebar(current="paradox")
 
 df = load_data()
 wildfire_events = detect_smoke_events(df)

@@ -1,7 +1,9 @@
 import streamlit as st
 import pandas as pd
 from datetime import date
-from app import load_model, load_data
+from app import load_model, load_data, render_sidebar
+
+render_sidebar(current="prediction")
 
 df = load_data()
 model, feature_names = load_model()

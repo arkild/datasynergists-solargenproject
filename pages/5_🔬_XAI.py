@@ -2,7 +2,9 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.inspection import PartialDependenceDisplay
-from app import load_model, load_data
+from app import load_model, load_data, render_sidebar
+
+render_sidebar(current="xai")
 
 df = load_data()
 model, feature_names = load_model()

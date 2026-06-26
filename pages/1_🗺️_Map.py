@@ -2,7 +2,9 @@ import streamlit as st
 import pandas as pd
 import requests
 from datetime import date
-from app import load_data, detect_smoke_events, get_event_window_data
+from app import load_data, detect_smoke_events, get_event_window_data, render_sidebar
+
+render_sidebar(current="map")
 
 st.markdown("""
     <style>

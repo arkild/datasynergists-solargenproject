@@ -1,4 +1,7 @@
 import streamlit as st
+from app import render_sidebar
+
+render_sidebar(current="future_work")
 
 st.title("💡 What's Next")
 st.markdown(

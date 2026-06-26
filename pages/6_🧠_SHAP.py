@@ -1,7 +1,9 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import shap
-from app import load_model, load_data
+from app import load_model, load_data, render_sidebar
+
+render_sidebar(current="shap")
 
 df = load_data()
 model, feature_names = load_model()
