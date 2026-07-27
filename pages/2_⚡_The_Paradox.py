@@ -127,7 +127,8 @@ else:
     # Shade low-cloud days with diagonal hatching so they're visually distinct from smoke shading
     for idx, row in low_cloud_days.iterrows():
         ax.axvspan(
-            row["date"], row["date"] + pd.Timedelta(days=1),
+            row["date"] - pd.Timedelta(days=1),
+            row["date"],
             alpha=0.25, facecolor='none', edgecolor='#264653',
             hatch='///', linewidth=0,
             label='Low Cloud Day' if idx == low_cloud_days.index[0] else None
