@@ -129,8 +129,8 @@ else:
         ax.axvspan(
             row["date"] - pd.Timedelta(days=1),
             row["date"],
-            alpha=0.25, facecolor='none', edgecolor='#264653',
-            hatch='///', linewidth=0,
+            alpha=0.3, facecolor='none', edgecolor='#1d3557',
+            hatch='///', linewidth=0.8,
             label='Low Cloud Day' if idx == low_cloud_days.index[0] else None
         )
 
