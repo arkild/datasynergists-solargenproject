@@ -93,8 +93,6 @@ else:
         label=f"{event_year} (Event)", zorder=5
     )
 
-    ax.axvspan(event_start, event_end, alpha=0.15, color="gray", label="Smoke Event")
-
     ax.axhline(
         baseline_mean, linestyle="--", color="#2a9d8f", linewidth=1.5,
         label=f"Baseline avg ({baseline_mean:.2f} MWh)"
@@ -117,12 +115,22 @@ else:
     ).reset_index()
     daily_cloud_flag.columns = ["date", "cloud_pct", "cloudbase_m"]
     daily_cloud_flag["date"] = pd.to_datetime(daily_cloud_flag["date"])
-    daily_cloud_flag["is_low_cloud"] = (
-        (daily_cloud_flag["cloud_pct"] >= 75) &
-        (daily_cloud_flag["cloudbase_m"] <= 2000)
-    )
+    daily_cloud_flag = window_full.groupby(window_full["dt"].dt.date).agg(
+        cloud_pct=("cloud_pct", "mean"),
+        cloudbase_m=("cloudbase_m", "mean"),
+        aod_smoke=("aod_smoke", "mean")   # ← new, using to find cloud days outside of the main event's window
+    ).reset_index()
 
     low_cloud_days = daily_cloud_flag[daily_cloud_flag["is_low_cloud"]]
+    #Flag all smoke days in a given window, even outside of the event itself
+    smoke_days = daily_cloud_flag[daily_cloud_flag["aod_smoke"] >= 0.2]
+
+    for idx, row in smoke_days.iterrows():
+        ax.axvspan(
+            row["date"] - pd.Timedelta(days=1), row["date"],
+            alpha=0.15, color="gray",
+            label="Smoke Event" if idx == smoke_days.index[0] else None
+        )
 
     # Shade low-cloud days with diagonal hatching so they're visually distinct from smoke shading
     for idx, row in low_cloud_days.iterrows():
