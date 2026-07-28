@@ -129,7 +129,7 @@ else:
     for idx, row in smoke_days.iterrows():
         ax.axvspan(
             row["date"] - pd.Timedelta(days=1), row["date"],
-            alpha=0.15, color="gray",
+            alpha=0.15, facecolor="gray", edgecolor="none",
             label="Smoke Event" if idx == smoke_days.index[0] else None
         )
 
@@ -138,8 +138,7 @@ else:
         ax.axvspan(
             row["date"] - pd.Timedelta(days=1),
             row["date"],
-            alpha=0.35, facecolor='none', edgecolor='#457b9d',
-            hatch='//', linewidth=0.6,
+            alpha=0.35, facecolor='none', edgecolor='#457b9d', hatch='//', linewidth=0,
             label='Low Cloud Day' if idx == low_cloud_days.index[0] else None
         )
 
