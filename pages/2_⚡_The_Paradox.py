@@ -111,17 +111,18 @@ else:
     ].copy()
     daily_cloud_flag = window_full.groupby(window_full["dt"].dt.date).agg(
         cloud_pct=("cloud_pct", "mean"),
-        cloudbase_m=("cloudbase_m", "mean")
-    ).reset_index()
-    daily_cloud_flag.columns = ["date", "cloud_pct", "cloudbase_m"]
-    daily_cloud_flag["date"] = pd.to_datetime(daily_cloud_flag["date"])
-    daily_cloud_flag = window_full.groupby(window_full["dt"].dt.date).agg(
-        cloud_pct=("cloud_pct", "mean"),
         cloudbase_m=("cloudbase_m", "mean"),
-        aod_smoke=("aod_smoke", "mean")   # ← new, using to find cloud days outside of the main event's window
+        aod_smoke=("aod_smoke", "mean")
     ).reset_index()
+    daily_cloud_flag.columns = ["date", "cloud_pct", "cloudbase_m", "aod_smoke"]
+    daily_cloud_flag["date"] = pd.to_datetime(daily_cloud_flag["date"])
 
+    daily_cloud_flag["is_low_cloud"] = (
+        (daily_cloud_flag["cloud_pct"] >= 75) &
+        (daily_cloud_flag["cloudbase_m"] <= 2000)
+    )
     low_cloud_days = daily_cloud_flag[daily_cloud_flag["is_low_cloud"]]
+
     #Flag all smoke days in a given window, even outside of the event itself
     smoke_days = daily_cloud_flag[daily_cloud_flag["aod_smoke"] >= 0.2]
 
